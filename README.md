@@ -1,0 +1,2 @@
+# openhack_proto
+nothing
