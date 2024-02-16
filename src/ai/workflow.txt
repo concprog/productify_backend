@@ -1,0 +1,17 @@
+workflow.txt
+
+TREE.workflow:
+user data --> relevant usr info (FIN) --> recursive question decomposition (FIN): SEARCH
+SEARCH --> give me a roadmap (FIN, SEARCH) --> STEPS(A, B, C, ...)
+
+FOR A IN STEPS:
+A --> decompose() A_TIME, A_TOPICS, A_PRI
+END
+
+
+
+TASK.workflow
+get highest pri --> decompose until time < 10h --> make quests based on AH
+
+
+user goal --> FIN, TIME, 
