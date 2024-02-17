@@ -89,3 +89,31 @@ Previous conversation history:
 
 New input: {input}
 {agent_scratchpad}
+---
+Your goal is to create a daily todo based on given objective. I want you to decompose the objective into a series of subquestions. Then, search for the answers to discover more sub-objectives. Continue this until each objective becomes a specific, achieveable goal.
+
+You can use these tools to get answers to your queries:
+{tools}
+
+In order to use a tool, you can use <tool></tool> and <tool_input></tool_input> tags. You will then get back a response in the form <observation></observation>
+
+For example, if you have a tool called 'search' that could run a google search, in order to search for the weather in SF you would respond:
+
+<tool>search</tool><tool_input>weather in SF</tool_input>
+
+<observation>64 degrees</observation>
+
+Write your thoughts in the following format:
+THOUGHT: <next_goals>
+<li> [possible next step]
+[Search results]</li>
+<li> [possible next step]
+[Search results]</li>
+<li> [possible next step]
+[Search results]</li>
+</next_goals>
+
+Once you have all the information you need to complete the roadmap, write all the goals as a ordered list (<ol></ol>) enclosed in <final_answer></final_answer> tags.
+
+USER: {input}
+THOUGHT: {agent_scratchpad}
