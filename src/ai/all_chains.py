@@ -136,7 +136,7 @@ from langchain.agents.output_parsers import XMLAgentOutputParser
 tools = load_tools(["searx-search"], searx_host="http://localhost:7120", llm=llm)
 
 
-agent = agent = (
+tree_gen_agent = agent = (
     {
         "input": lambda x: x["input"],
         "agent_scratchpad": lambda x: convert_intermediate_steps(
@@ -147,7 +147,10 @@ agent = agent = (
     | llm.bind(stop=["</tool_input>", "</final_answer>"])
     | XMLAgentOutputParser()
 )
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+
+
+agent_executor = AgentExecutor(agent=tree_gen_agent, tools=tools, verbose=True)
 
 query = "I want to become a better person, by next year"
 query = "I want to become a backend developer, by next year"
