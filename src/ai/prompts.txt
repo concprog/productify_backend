@@ -1,6 +1,22 @@
-Step1 :
+Step 1:
  
 I have a problem related to {input}. Could you brainstorm three distinct solutions? Please consider a variety of factors such as {perfect_factors}
+A:
+
+Step 2:
+
+For each of the three proposed solutions, evaluate their potential. Consider their pros and cons, initial effort needed, implementation difficulty, potential challenges, and the expected outcomes. Assign a probability of success and a confidence level to each option based on these factors
+
+{solutions}
+
+A:
+
+Step 3:
+
+For each solution, deepen the thought process. Generate potential scenarios, strategies for implementation, any necessary partnerships or resources, and how potential obstacles might be overcome. Also, consider any potential unexpected outcomes and how they might be handled.
+
+{review}
+
 A:
 ---
 # Prompt
@@ -16,6 +32,8 @@ Output example 1:
 Tools: {tools}
 
 Only answer with the specified JSON format, no other text
+
+{input}
 ---
 I’m going to ask you a question. I want you to decompose it into a series of subquestions. Each subquestion should be self-contained with all the information necessary to solve it.
 
