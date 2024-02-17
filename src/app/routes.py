@@ -5,7 +5,7 @@ from fastapi import UploadFile, File
 from fastapi.responses import FileResponse
 
 from app import functions
-from ai import
+from ai import chains
 
 
 router = APIRouter()
@@ -14,17 +14,15 @@ DATA_STORE_PATH = "data/user_doc"
 
 
 @router.post("/dailymap/")
-async def make_notes(
-    para: str,
+async def get_daily_map(
+    goal: str,
 ):
-    response = ai_functions.note_maker_summarize(para, n_paras=2)
-    return ai_functions.generate_text_from_response(response)
-
-@router.post("/roadmap")
-async def search_similar_para(
-    para: str,
-):
-    responses = ai_functions.search_passages(passage=para, top_k=4)
-    response = {"paragraphs": responses}
+    response = chains.run_task_decomp(goal)
     return response
 
+
+@router.post("/roadmap/")
+async def search_similar_para(goal: str, background: str, expectations: str):
+    response = chains.run_roadgen(goal, background)
+    response = {"nodes": response}
+    return response

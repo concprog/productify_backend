@@ -5,7 +5,7 @@ from langchain_core.prompts import (
 )
 import datetime
 from langchain_core.output_parsers import StrOutputParser
-from langchain.agents import AgentExecutor, load_tools, create_react_agent, tool
+from langchain.agents import AgentExecutor, AgentOutputParser, load_tools, create_react_agent, tool
 from langchain.agents.output_parsers import XMLAgentOutputParser
 
 
@@ -59,11 +59,13 @@ USER: {input}
 
 tree_generator_prompt = PromptTemplate.from_template(
 """ SYSTEM: Generate a tree-like roadmap outlining the step-by-step process to achieve the final goal of the user.
-Search the web to find out how to accomplish the primary goal.
-Begin with the primary goal as the root of the tree, and branch out into major milestones or tasks that need to be accomplished. 
-Further, break down each major milestone into subtasks or actions required to complete it.
-Continue this hierarchical structure until reaching actionable and manageable steps. 
-Include dependencies and connections between tasks, if any, to illustrate the sequential or parallel nature of the process. Use concise and clear language to make the roadmap easily understandable.
+Follow the given instructions:
+1. Search the web to find out how to accomplish the primary goal.
+2. Begin with the primary goal as the root of the tree, and branch out into major milestones or tasks that need to be accomplished. 
+3. Further, break down each major milestone into subtasks or actions required to complete it.
+4. Continue this hierarchical structure until reaching actionable and manageable steps. 
+5. Include dependencies and connections between tasks, if any, to illustrate the sequential or parallel nature of the process.
+Use concise and clear language to make the hierarchial roadmap easily understandable.
 
 Tools:
 {tools}
@@ -163,7 +165,7 @@ Organize your thoughts in the format:
 </next_goals>
 
 The user will have exactly ONE DAY to complete all the goals, so keep that in mind.
-Once you gather all the necessary information write all the goals as a numbered list (<ol></ol>) enclosed in <final_answer></final_answer> tags in XML.
+Once you gather all the necessary information write all the goals as a numbered list  enclosed in <final_answer></final_answer> tags in XML.
 
 USER:
 {input}
@@ -224,7 +226,6 @@ task_decomposer_agent = (
     | task_decomposer_prompt.partial(tools=convert_tools(tools))
     | llm.bind(stop=["</tool_input>", "</final_answer>"])
     | XMLAgentOutputParser()
-)
 
 subq_answer_agent = (
     {
@@ -240,7 +241,8 @@ subq_answer_agent = (
 
 
 def get_agent_exec(agent, **kwargs):
-    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+    return AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors="Check your output and make sure it conforms, use the Action/Action Input syntax")
+
 
 
 def run_roadgen(input, user_data):
