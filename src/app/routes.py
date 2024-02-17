@@ -17,12 +17,11 @@ DATA_STORE_PATH = "data/user_doc"
 async def get_daily_map(
     goal: str,
 ):
-    response = chains.run_task_decomp(goal)
+    response = await chains.arun_task_decomp(goal)
     return response
 
 
 @router.post("/roadmap/")
 async def search_similar_para(goal: str, background: str, expectations: str):
-    response = chains.run_roadgen(goal, background)
-    response = {"nodes": response}
+    response = await chains.arun_roadgen(goal, background, expectations)
     return response

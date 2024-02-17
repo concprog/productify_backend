@@ -1,11 +1,19 @@
+from fastapi import background
 import xmltodict
+import json
 from langchain_community.llms.llamacpp import LlamaCpp
 from langchain_core.prompts import (
     PromptTemplate,
 )
 import datetime
-from langchain_core.output_parsers import StrOutputParser
-from langchain.agents import AgentExecutor, AgentOutputParser, load_tools, create_react_agent, tool
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
+from langchain.agents import (
+    AgentExecutor,
+    AgentOutputParser,
+    load_tools,
+    create_react_agent,
+    tool,
+)
 from langchain.agents.output_parsers import XMLAgentOutputParser
 
 
@@ -13,8 +21,8 @@ def load_llm():
     llm = LlamaCpp(
         model_path="data/zephyr-7b-beta.Q4_K_M.gguf",
         temperature=0.7,
-        n_ctx=3900,
-        n_gpu_layers=20,
+        n_ctx=2560,
+        n_gpu_layers=24,
         max_tokens=5120,
     )
     return llm
@@ -41,15 +49,15 @@ For example, to search for the weather in SF:
 
 Compile your thoughts in the following format:
 <thoughts>
-    <li> [Subquestion] </li>
-    <info>[Search results]<info>
-    <li> [Subquestion] </li>
-    <info>[Search results]<info>
-    <li> [Subquestion] </li>
-    <info>[Search results]<info>
+    <question> [Subquestion] </question>
+    [call tool to get search results]
+    <question> [Subquestion] </question>
+    [Search results]
+    <question> [Subquestion] </question>
+    [Search results]
 </thoughts>
 
-Include specific questions about time estimation, potential challenges, and other relevant details. Once you've gathered the information, present your findings as valid XML, enclosed in <final_answer></final_answer> tags. 
+Include specific questions about time estimation, potential challenges, problems , and other relevant details. Once you've gathered the necessary information, present your findings as valid XML, enclosed in <final_answer></final_answer> tags. 
 
 USER: {input}
 <thoughts> 
@@ -58,14 +66,14 @@ USER: {input}
 )
 
 tree_generator_prompt = PromptTemplate.from_template(
-""" SYSTEM: Generate a tree-like roadmap outlining the step-by-step process to achieve the final goal of the user.
+    """SYSTEM: Generate a sequential progress path or roadmap outlining the step-by-step process to achieve the final goal of the user.
 Follow the given instructions:
 1. Search the web to find out how to accomplish the primary goal.
 2. Begin with the primary goal as the root of the tree, and branch out into major milestones or tasks that need to be accomplished. 
 3. Further, break down each major milestone into subtasks or actions required to complete it.
-4. Continue this hierarchical structure until reaching actionable and manageable steps. 
-5. Include dependencies and connections between tasks, if any, to illustrate the sequential or parallel nature of the process.
-Use concise and clear language to make the hierarchial roadmap easily understandable.
+4. Continue this hierarchical structure until reaching actionable and manageable steps.
+
+Use concise and clear language to make the hierarchy easily understandable.
 
 Tools:
 {tools}
@@ -75,17 +83,31 @@ For instance, with a 'search' tool:
 <tool>search</tool><tool_input>weather in SF</tool_input>
 <observation>64 degrees</observation>
 
-Use the search tool to get more information about each subtask, and ask specific questions about time estimation, potential challenges, and other relevant details.
+Use the search tool to get more information about each subtask, and ask specific questions about expected time, potential problems, and other relevant details.
 
 Compile your thoughts and in the following format:
 <thoughts>
-    <li> [search tool to query task] </li>
-    <li> [summary of search results] </li>
-    <li> [decision to include] </li>
+    <goal>
+        [Task]
+    <tool>search</tool><tool_input>[search query for subtasks]</tool_input>
+    <tool>search</tool><tool_input>[search query for relavant details]</tool_input>
+        <!-- Add more subqueries as needed -->
+        <thought> [think using search results] </thought>
+        <included> [decision to include(y/n)] </included>
+    </goal>
+    <!-- Add more thoughts as needed -->
 </thoughts>
 
-Organize your findings in a user-friendly XML format:
-<final_answer>
+Use your thoughts to guide the user from the starting point to the final goal, minimizing unnecessary details. When you have all the necessary information for the roadmap, present the complete roadmap in XML format and enclose it in <final_answer></final_answer> tags.
+Today's date is: {date}
+
+USER: 
+Create a detailed progress path from the starting point to the end goal.
+STARTING POINT: {user_data}
+FINAL GOAL: {input}
+Do not include any steps from beyond the end goal.
+
+Organize your findings in the given XML format:
 <roadmap>
     <goal>
         <description>[Insert your specific goal here]</description>
@@ -105,7 +127,7 @@ Organize your findings in a user-friendly XML format:
                     <subtask>[Action or task 4]</subtask>
                     <!-- Add more subtasks as needed -->
                     <dependencies>
-                        <dependency>Completion of Milestone 1</dependency>
+                        <dependency>Complete Milestone 0</dependency>
                     </dependencies>
                 </subtasks>
             </milestone>
@@ -113,17 +135,12 @@ Organize your findings in a user-friendly XML format:
         </milestones>
     </goal>
 </roadmap>
-</final_answer>
 
-Guide the user from the starting point to the final goal, minimizing unnecessary details. Present the complete roadmap in XML format within <final_answer></final_answer> tags. Remember, the final output should only be valid XML and nothing else.
+Present the complete roadmap in XML format and enclose it in <final_answer></final_answer> tags.
+Adhere to the given output format strictly.
 
-Today's date is: {date}
-
-USER: Create a detailed progress path from the starting point to the end goal
-STARTING POINT: {user_data}
-FINAL GOAL: {input}
-
-ASSISTANT: <thoughts>
+ASSISTANT: 
+<thoughts>
 {agent_scratchpad}
 """
 )
@@ -132,8 +149,8 @@ task_decomposer_prompt = PromptTemplate.from_template(
     """SYSTEM: Your task is to craft a daily to-do list based on a given objective. Follow these steps:
 1. Decompose the objective into a series of subquestions that will help you form a complete understanding.
 2. Utilize the provided tools to search for answers to each subquestion.
-3. Include inquiries about the estimated time required for each task, potential challenges and problems, and relevant details.
-4. Include opinionated sources such as reddit and other forums in your search queries.
+3. Include inquiries about the estimated time required for each task, potential challenges and problems, and relevant details. Use opinionated sources such as reddit and other forums in your search queries.
+4. Use the retrieved information to create a list of tasks
 
 Continue until each objective becomes a specific, achievable goal.
 
@@ -165,7 +182,7 @@ Organize your thoughts in the format:
 </next_goals>
 
 The user will have exactly ONE DAY to complete all the goals, so keep that in mind.
-Once you gather all the necessary information write all the goals as a numbered list  enclosed in <final_answer></final_answer> tags in XML.
+Once you gather all the necessary information write all the goals as a numbered list enclosed in <final_answer></final_answer> tags in XML.
 
 USER:
 {input}
@@ -175,14 +192,19 @@ ASSISTANT:
 """
 )
 
-xml_to_json_prompt = PromptTemplate.from_template('''<|system|>
-SYSTEM MESSAGE</s>
+to_json_prompt = PromptTemplate.from_template(
+    """<|system|>
+You are an intelligent, helpful and logical assistant who is good at coding.</s>
 <|user|>
-Convert the following XML data to valid JSON, making corrections and changes wherever needed:
+Convert the following XML/structured data to valid JSON, making corrections and changes wherever needed:
 {input}
+The JSON object should be formatted:
+Convert the XML/structured data to JSON, translating tags to properties as needed. Only output the JSON object and NOTHING ELSE.
 </s>
 <|assistant|>
-''')
+"""
+)
+
 
 def convert_intermediate_steps(intermediate_steps):
     log = ""
@@ -212,7 +234,7 @@ tree_gen_agent = (
         ),
     }
     | tree_generator_prompt.partial(tools=convert_tools(tools))
-    | llm.bind(stop=["</tool_input>", "</final_answer>"])
+    | llm.bind(stop=["</tool_input>", "</final_answer>", "<END/>"])
     | XMLAgentOutputParser()
 )
 
@@ -226,6 +248,7 @@ task_decomposer_agent = (
     | task_decomposer_prompt.partial(tools=convert_tools(tools))
     | llm.bind(stop=["</tool_input>", "</final_answer>"])
     | XMLAgentOutputParser()
+)
 
 subq_answer_agent = (
     {
@@ -239,15 +262,24 @@ subq_answer_agent = (
     | XMLAgentOutputParser()
 )
 
+to_json = to_json_prompt | llm | StrOutputParser()
+
 
 def get_agent_exec(agent, **kwargs):
-    return AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors="Check your output and make sure it conforms, use the Action/Action Input syntax")
+    return AgentExecutor(
+        agent=agent,
+        tools=tools,
+        verbose=True,
+        handle_parsing_errors=True,
+    )
 
 
-
-def run_roadgen(input, user_data):
+def run_roadgen(input, background="A working professional", expectations=""):
     executor = get_agent_exec(tree_gen_agent)
     date = datetime.date.isoformat(datetime.datetime.now().date())
+    user_data = background
+    if len(expectations) > 3:
+        user_data += f"\nI expect to: {expectations} from the roadmap."
     result = executor.invoke({"input": input, "date": date, "user_data": user_data})
     return result
 
@@ -264,12 +296,51 @@ def run_subq_answer(input):
     return result
 
 
+async def arun_roadgen(
+    input, background="A working professional", expectations=""
+):
+    executor = get_agent_exec(tree_gen_agent)
+    date = datetime.date.isoformat(datetime.datetime.now().date())
+    user_data = background
+    if len(expectations) > 3:
+        user_data += f"\nI expect to: {expectations} from the roadmap"
+    return await executor.ainvoke(
+        {"input": input, "date": date, "user_data": user_data}
+    )
+
+
+async def arun_task_decomp(input):
+    executor = get_agent_exec(task_decomposer_agent)
+    result = await executor.ainvoke({"input": input})
+    return result
+
+
+async def arun_subq_answer(input):
+    executor = get_agent_exec(subq_answer_agent)
+    result = await executor.ainvoke({"input": input})
+    return result
+
+
+async def allm_to_json(input):
+    x = await to_json.ainvoke({"input": input})
+    x = json.loads(x)
+    return x
+
+
 if __name__ == "__main__":
     query = "I want to become a better person, by next year"
     query = "I want to become a backend developer, by next year"
     user_data = "College Student"
-    # x = run_subq_answer(query)
-    x = run_task_decomp(query)
-    x = run_roadgen(query, user_data)
-    x = x["output"]+r"</final_answer>"
+
+    ch = input("Enter s->subq, t->task decomp, r->roadgen: ").lower()
+    if ch == "s":
+        x = run_subq_answer(query)
+    if ch == "t":
+        x = run_task_decomp(query)
+    if ch == "r":
+        x = run_roadgen(query, user_data)
+    x = x["output"]
     print(x)
+    x = to_json.invoke({"input": x})
+    print(x)
+    print(json.loads(x))
