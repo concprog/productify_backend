@@ -1,20 +1,17 @@
-from fastapi import background
-import xmltodict
 import json
 from langchain_community.llms.llamacpp import LlamaCpp
 from langchain_core.prompts import (
     PromptTemplate,
 )
 import datetime
-from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
+from langchain_core.output_parsers import StrOutputParser
 from langchain.agents import (
     AgentExecutor,
-    AgentOutputParser,
     load_tools,
-    create_react_agent,
     tool,
 )
 from langchain.agents.output_parsers import XMLAgentOutputParser
+from langchain_community.utilities import StackExchangeAPIWrapper
 
 
 def load_llm():
@@ -70,7 +67,7 @@ tree_generator_prompt = PromptTemplate.from_template(
 Follow the given instructions:
 1. Search the web to find out how to accomplish the primary goal.
 2. Begin with the primary goal as the root of the tree, and branch out into major milestones or tasks that need to be accomplished. 
-3. Further, break down each major milestone into subtasks or actions required to complete it.
+3. Further, break down each major milestone into subtasks or actions required to complete it. Search the web to find out how to 
 4. Continue this hierarchical structure until reaching actionable and manageable steps.
 
 Use concise and clear language to make the hierarchy easily understandable.
@@ -296,9 +293,7 @@ def run_subq_answer(input):
     return result
 
 
-async def arun_roadgen(
-    input, background="A working professional", expectations=""
-):
+async def arun_roadgen(input, background="A working professional", expectations=""):
     executor = get_agent_exec(tree_gen_agent)
     date = datetime.date.isoformat(datetime.datetime.now().date())
     user_data = background
@@ -321,8 +316,8 @@ async def arun_subq_answer(input):
     return result
 
 
-async def allm_to_json(input):
-    x = await to_json.ainvoke({"input": input})
+async def llm_to_json(input):
+    x = to_json.invoke({"input": input})
     x = json.loads(x)
     return x
 
