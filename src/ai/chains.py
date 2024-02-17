@@ -316,7 +316,7 @@ async def arun_subq_answer(input):
     return result
 
 
-async def llm_to_json(input):
+def llm_to_json(input):
     x = to_json.invoke({"input": input})
     x = json.loads(x)
     return x
@@ -324,7 +324,6 @@ async def llm_to_json(input):
 
 if __name__ == "__main__":
     query = "I want to become a better person, by next year"
-    query = "I want to become a backend developer, by next year"
     user_data = "College Student"
 
     ch = input("Enter s->subq, t->task decomp, r->roadgen: ").lower()
@@ -336,6 +335,5 @@ if __name__ == "__main__":
         x = run_roadgen(query, user_data)
     x = x["output"]
     print(x)
-    x = to_json.invoke({"input": x})
+    x = llm_to_json(x)
     print(x)
-    print(json.loads(x))
