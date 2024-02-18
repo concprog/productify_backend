@@ -8,6 +8,9 @@ git clone https://github.com/nusaturn/openhack_proto_backend
 pip install -r requirements.txt
 CMAKE_ARGS="-DLLAMA_CLBLAST=on" pip install llama-cpp-python
 ```
+Download a model file (such as one from [here](https://huggingface.co/TheBloke/dolphin-2.6-mistral-7B-dpo-GGUF))
+and edit `settings.yaml` to include the model path.  
+
 Then, install searXNG and configure it to run on `localhost:7120`
 ```sh
 docker pull searxng/searxng
@@ -21,3 +24,6 @@ docker run --rm \
 ```
 
 When you're done, stop SearXNG using `docker container stop {container_id} `
+
+
+You might want to adjust the given settings based on your hardware.
