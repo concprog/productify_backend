@@ -1,5 +1,5 @@
-# openhack_proto
-Only the backend
+# Productify (backend)
+AI based roadmap-generator (backend)
 
 ### Quickstart
 First, clone the repo and install deps:  
