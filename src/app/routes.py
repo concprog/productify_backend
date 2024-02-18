@@ -23,7 +23,7 @@ async def get_daily_map(
 
 
 @router.post("/roadmap/")
-async def search_similar_para(goal: str, background: str, expectations: str):
+async def get_roadmap(goal: str, background: str, expectations: str):
     response = chains.run_roadgen(goal, background, expectations)
     response = chains.llm_to_json(response["output"])
     return response

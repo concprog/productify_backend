@@ -1,0 +1,7 @@
+langchain
+langchain-community
+langchainhub
+fastapi[all]
+uvicorn[all]
+pyyaml
+xmltodict
