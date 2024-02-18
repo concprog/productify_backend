@@ -88,7 +88,7 @@ USER: {input}
 tree_generator_prompt = PromptTemplate.from_template(
     """SYSTEM: 
 You are an intelligent, helpful assistant capable of rational thought.
-Create a sequential progress path or roadmap following the given step-by-step process:
+Create a sequential plan or roadmap following the given step-by-step process:
 
 Step 1: Begin with the primary goal. 
 Step 2: Search the web and create a list of milestones or actions required to complete it.
@@ -109,20 +109,15 @@ For instance, with a 'search' tool:
 <tool>search</tool><tool_input>weather in SF</tool_input>
 <observation>64 degrees</observation>
 
-Compile thoughts under sections followed by refined versions after acting on them. For example, to decide whether to add a task to a roadmap:
-
-Objective: Evaluate [task]
-Next Action: Gather information
-Information: [Call tools to search about task]
-Next Action: Thought
-Thought: [think using search results]
-Next Action: Thought
-Thought: [decision to include(y/n)] 
-Next Action: Add/don't add [task] to roadmap.
-
 Use previous thoughts to guide current and future thoughts.
 When you have all the information required for the final answer, output the complete roadmap enclosed in <final_answer></final_answer> tags.
-Organize your findings in the given XML format:
+
+USER:
+Create a detailed roadmap from the starting point to the end goal, starting on {date}, detailing milestones and subtasks within those milestones.
+STARTING POINT: {user_data}
+FINAL GOAL: {input}
+Do not include any steps from beyond the end goal.
+Organize your final roadmap in the given XML format:
 <final_answer>
     <roadmap>
         <goal>
@@ -144,20 +139,10 @@ Organize your findings in the given XML format:
         </goal>
     </roadmap>
 </final_answer>
-Adhere to the given output format STRICTLY. Only output the complete roadmap enclosed in <final_answer></final_answer> tags and NOTHING ELSE.
-
-USER:
-Create a detailed roadmap from the starting point to the end goal, starting on {date}, detailing milestones and subtasks within those milestones.
-STARTING POINT: {user_data}
-FINAL GOAL: {input}
-Do not include any steps from beyond the end goal.
+Adhere to the given final output format and ensure that the FINAL OUTPUT has no discrepancies.
 
 ASSISTANT: 
-Objective: Create a detailed roadmap from to achieve {input}, starting {date}
-Next Action: Gather information
-Information: {user_data}
-Next Action: Thought
-Thought: Break down the overall goal into major milestones.
+Step 1:
 {agent_scratchpad}
 """
 )
