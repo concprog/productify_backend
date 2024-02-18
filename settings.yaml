@@ -1,5 +1,5 @@
 model_path: data/zephyr-7b-beta.Q4_K_M.gguf
-model_max_tokens: 4096
-model_ctx_len: 1800
+model_max_tokens: 5120
+model_ctx_len: 2048
 model_gpu_layers: 24
 model_temp: 0.75 

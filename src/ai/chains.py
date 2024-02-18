@@ -1,5 +1,6 @@
 import json
 import datetime
+import time
 import yaml
 
 from langchain_community.llms.llamacpp import LlamaCpp
@@ -14,6 +15,8 @@ from langchain.agents import (
 )
 from langchain.agents.output_parsers import XMLAgentOutputParser
 from langchain_community.utilities import StackExchangeAPIWrapper
+
+timestr = lambda: time.strftime("%Y%m%d-%H%M%S")
 
 
 def load_config():
@@ -67,9 +70,9 @@ For example, to search for the weather in SF:
 Compile your thoughts in the following format:
 <thoughts>
     <question> [Subquestion] </question>
-    [call tool to get search results]
+    <answer>[call tool to get search results]</answer>
     <question> [Subquestion] </question>
-    [Search results]
+    <answer>[Search results]</answer>
     <question> [Subquestion] </question>
     [Search results]
 </thoughts>
@@ -83,93 +86,84 @@ USER: {input}
 )
 
 tree_generator_prompt = PromptTemplate.from_template(
-    """SYSTEM: Your role is to generate a structured plan by logically decomposing objectives into specific, actionable components while considering feasibility and addressing potential issues.
+    """SYSTEM: 
+You are an intelligent, helpful assistant capable of rational thought.
+Create a sequential progress path or roadmap following the given step-by-step process:
 
-Think step by step, following the given instructions:
-Step 1: Begin with the primary goal as the root of the tree. 
-Step 2: Search the web to find out how to accomplish the primary goal, potential issues, time constraints etc.
-Step 3: Break down each major milestone into subtasks or actions required to complete it. 
-Step 4: Search the web to find out more information about each milestone, and repeat the cycle.
-Use concise and clear language to make the hierarchy easily understandable.
+Step 1: Begin with the primary goal. 
+Step 2: Search the web and create a list of milestones or actions required to complete it.
+Step 3: Arrange the milestones in chronological order and find out the time required to complete each one.
+Step 4: Select the milestone that should be completed first.
+Step 5: Search the web to find out more information about the milestone such as potential issues, time constraints etc.
+Step 6: Decide whether to include the milestone or not based on the returned information.
 
-Present initial ideas under `<thoughts>...</thoughts>` sections followed by refined versions after acting on them. For example, to decide whether to add a task to the roadmap:
-<thoughts>
-    <objective>Evaluate [Task]</objective>
-    <info>
-        <tool>search</tool><tool_input>[search query for subtasks]</tool_input>
-        <tool>search</tool><tool_input>[search query for relevant details]</tool_input>
-        <!-- Add more subqueries as needed -->
-    </info>
-    <thought> 
-        [think using search results]
-        <ol>[list the subtasks found from previous searches]</ol>
-    </thought>
-    <reflection>
-        [decision to include(y/n)] 
-    </reflection>
-    <!-- Add more thoughts as needed -->
-</thoughts>
+Repeat the cycle taking the next milestone as the main task until at least 5 milestones have been defined. Use concise and clear language to make the hierarchy easily understandable.
 
+Use tools to interact and gain information about any topic you need to know.
 Tools:
 {tools}
+
 To use the tools, employ <tool></tool> and <tool_input></tool_input> tags, and receive responses in the form <observation></observation>.
 
 For instance, with a 'search' tool:
 <tool>search</tool><tool_input>weather in SF</tool_input>
 <observation>64 degrees</observation>
 
-Use the search tool to get more information about each subtask, and ask specific questions about expected time, potential problems, and other relevant details.
+Compile thoughts under sections followed by refined versions after acting on them. For example, to decide whether to add a task to a roadmap:
 
-Make sure that thoughts and tools are valid, parseable XML and ignore garbage search results. Always search about goals using tools.
+Objective: Evaluate [task]
+Next Action: Gather information
+Information: [Call tools to search about task]
+Next Action: Thought
+Thought: [think using search results]
+Next Action: Thought
+Thought: [decision to include(y/n)] 
+Next Action: Add/don't add [task] to roadmap.
 
-Use your thoughts to guide the user from the starting point to the final goal, minimizing unnecessary details. When you have all the necessary information for the final answer, output the complete roadmap enclosed in <final_answer></final_answer> tags.
-
-USER: 
-Today's date is: {date}
-Create a detailed roadmap from the starting point to the end goal.
-STARTING POINT: {user_data}
-FINAL GOAL: {input}
-Do not include any steps from beyond the end goal.
-
+Use previous thoughts to guide current and future thoughts.
+When you have all the information required for the final answer, output the complete roadmap enclosed in <final_answer></final_answer> tags.
 Organize your findings in the given XML format:
 <final_answer>
     <roadmap>
         <goal>
-            <description>{input}</description>
+            <description>[brief description of the goal]</description>
             <milestones>
-                <milestone>
-                    <description>[Describe the first major milestone]</description>
+                <milestone id=1>
+                    <name>[descriptive name of the first milestone]</name>
                     <subtasks>
                         <subtask>[Action or task 1]</subtask>
                         <subtask>[Action or task 2]</subtask>
                         <!-- Add more subtasks as needed -->
                     </subtasks>
-                </milestone>
-                <milestone>
-                    <description>[Describe the second major milestone]</description>
-                    <subtasks>
-                        <subtask>[Action or task 3]</subtask>
-                        <!-- Add more subtasks as needed -->
-                        <dependencies>
-                            <dependency>Complete Milestone 0</dependency>
-                        </dependencies>
-                    </subtasks>
+                    <dependencies>
+                        <dependency>[id of dependency milestone, eg: 0]</dependency>
+                    </dependencies>
                 </milestone>
                 <!-- Add more milestones as needed -->
             </milestones>
         </goal>
     </roadmap>
 </final_answer>
-Adhere to the given output format STRICTLY. Only output the XML document and NOTHING ELSE.
+Adhere to the given output format STRICTLY. Only output the complete roadmap enclosed in <final_answer></final_answer> tags and NOTHING ELSE.
 
- 
-<thoughts>
+USER:
+Create a detailed roadmap from the starting point to the end goal, starting on {date}, detailing milestones and subtasks within those milestones.
+STARTING POINT: {user_data}
+FINAL GOAL: {input}
+Do not include any steps from beyond the end goal.
+
+ASSISTANT: 
+Objective: Create a detailed roadmap from to achieve {input}, starting {date}
+Next Action: Gather information
+Information: {user_data}
+Next Action: Thought
+Thought: Break down the overall goal into major milestones.
 {agent_scratchpad}
 """
 )
 
 task_decomposer_prompt = PromptTemplate.from_template(
-    """SYSTEM: Your task is to craft a daily to-do list based on a given objective. Follow these steps:
+"""SYSTEM: Your task is to craft a daily to-do list based on a given objective. Follow these steps:
 1. Decompose the objective into a series of subquestions that will help you form a complete understanding.
 2. Utilize the provided tools to search for answers to each subquestion.
 3. Include inquiries about the estimated time required for each task, potential challenges and problems, and relevant details. Use opinionated sources such as reddit and other forums in your search queries.
@@ -207,6 +201,7 @@ Organize your thoughts in the format:
 The user will have exactly ONE DAY to complete all the goals, so keep that in mind.Once you gather all the necessary information write all the goals as a numbered list enclosed in <final_answer></final_answer> tags in XML.
 
 USER:
+Today is: {datetime}
 {input}
 
 ASSISTANT: 
@@ -244,7 +239,12 @@ def convert_tools(tools):
 
 
 llm = load_llm()
-tools = load_tools(["searx-search"], searx_host="http://localhost:7120", k=2, llm=llm)
+tools = load_tools(
+    ["searx-search"],
+    searx_host="http://localhost:7120",
+    num_results=3,
+    engines=["github", "google", "bing", "wiki", "arxiv", "duckduckgo"],
+)
 
 tree_gen_agent = (
     {
@@ -256,12 +256,13 @@ tree_gen_agent = (
         ),
     }
     | tree_generator_prompt.partial(tools=convert_tools(tools))
-    | llm.bind(stop=["</tool_input>", "</final_answer>", "<END/>"])
+    | llm.bind(stop=["</tool_input>", "</final_answer>"])
     | XMLAgentOutputParser()
 )
 
 task_decomposer_agent = (
     {
+        "datetime": lambda x: x["datetime"],
         "input": lambda x: x["input"],
         "agent_scratchpad": lambda x: convert_intermediate_steps(
             x["intermediate_steps"]
@@ -298,7 +299,7 @@ def get_agent_exec(agent, **kwargs):
 
 def run_roadgen(input, background="A working professional", expectations=""):
     executor = get_agent_exec(tree_gen_agent)
-    date = datetime.date.isoformat(datetime.datetime.now().date())
+    date = timestr()
     user_data = background
     if len(expectations) > 3:
         user_data += f"\nI expect to: {expectations} from the roadmap."
@@ -308,7 +309,7 @@ def run_roadgen(input, background="A working professional", expectations=""):
 
 def run_task_decomp(input):
     executor = get_agent_exec(task_decomposer_agent)
-    result = executor.invoke({"input": input})
+    result = executor.invoke({"input": input, "datetime": timestr()})
     return result
 
 

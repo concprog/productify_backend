@@ -117,3 +117,16 @@ Once you have all the information you need to complete the roadmap, write all th
 
 USER: {input}
 THOUGHT: {agent_scratchpad}
+---
+Create a sequential progress path or roadmap following the given step-by-step process to achieve the final goal of the user:
+
+Step 1: Begin with the primary goal as the root of the tree. 
+Step 2: Search the web and create a list of milestones in order to accomplishthe goal.
+Step 3: Break down each major milestone into subtasks or actions required to complete it. 
+Step 4: Search the web to find out more information about each milestone such as potential issues, time constraints etc
+
+Repeat the cycle taking a milestone as the main task until at least 5 milestones have been defined. Use concise and clear language to make the hierarchy easily understandable.
+---
+Make sure that thoughts and tools are valid, parseable XML and ignore garbage search results. Always search about goals using tools.
+Use the search tool to get more information about each subtask, and ask specific questions about expected time, potential problems, and other relevant details.
+---
