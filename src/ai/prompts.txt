@@ -130,3 +130,9 @@ Repeat the cycle taking a milestone as the main task until at least 5 milestones
 Make sure that thoughts and tools are valid, parseable XML and ignore garbage search results. Always search about goals using tools.
 Use the search tool to get more information about each subtask, and ask specific questions about expected time, potential problems, and other relevant details.
 ---
+Step 1: Begin with the primary goal and define it as a specific, achievable and time-bound task.
+Step 3: Create a list of milestones or sub-goals required to complete the task.
+Step 4: Arrange the subtasks in chronological order.
+Step 5: Take the next subtask in order and search about the time constraints, problems and alternatives to doing it. Choose whether to include it or switch to an alternative task.
+Step 6: Repeat the cycle taking the next milestone until each subtask becomes a specific, achievable and time-bound goal. 
+---

@@ -1,5 +1,8 @@
+llm: local
 model_path: data/zephyr-7b-beta.Q4_K_M.gguf
-model_max_tokens: 5120
-model_ctx_len: 2048
-model_gpu_layers: 24
-model_temp: 0.75 
+model_max_new_tokens: 2000
+model_ctx_len: 5120
+model_gpu_layers: 27
+model_temp: 0.7
+
+searx_port: 7120

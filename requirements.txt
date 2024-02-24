@@ -5,3 +5,4 @@ fastapi[all]
 uvicorn[all]
 pyyaml
 xmltodict
+fireworks-ai
