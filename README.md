@@ -1,5 +1,8 @@
 # Productify (backend)
 AI based roadmap-generator (backend)
+  - Uses web search and a Chain-of-Thought prompt to find out how to achieve a goal, given any goal
+  - Creates a series of SMART goals that can be completed to achieve the end goal
+  - Can be used for short term planning as well.
 
 ### Quickstart
 First, clone the repo and install deps:  
